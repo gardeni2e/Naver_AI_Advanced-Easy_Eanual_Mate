@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 
 import requests
@@ -15,9 +16,11 @@ class ClovaStudioService:
         if not context:
             return "제공된 매뉴얼에서 확인할 수 없습니다."
         if settings.clova_api_key:
-            return self._answer_with_clova(question, context, mode, source_type)
+            answer = self._answer_with_clova(question, context, mode, source_type)
+            return self._ensure_easy_glossary(answer, context, mode)
         if settings.mock_when_no_api_key:
-            return self._answer_locally(question, sources, mode)
+            answer = self._answer_locally(question, sources, mode)
+            return self._ensure_easy_glossary(answer, context, mode)
         raise RuntimeError("CLOVA_API_KEY가 설정되어 있지 않습니다.")
 
     def _answer_with_clova(self, question: str, context: str, mode: AnswerMode, source_type: str) -> str:
@@ -91,6 +94,45 @@ OCR이 불완전해 보이면 "사진에서 확인되는 내용 기준"이라고
 
     def _needs_safety_notice(self, text: str) -> bool:
         return any(keyword in text for keyword in RISK_KEYWORDS)
+
+    def _ensure_easy_glossary(self, answer: str, context: str, mode: AnswerMode) -> str:
+        if mode != "easy" or "어려운 용어 쉽게 풀기" in answer:
+            return answer
+        glossary = build_easy_glossary(answer, context)
+        if not glossary:
+            return answer
+        lines = ["", "💡 어려운 용어 쉽게 풀기"]
+        lines.extend(f"- {term}: {description}" for term, description in glossary)
+        return f"{answer.rstrip()}\n\n" + "\n".join(lines)
+
+
+TERM_EXPLANATIONS = {
+    "린스": "그릇이 더 잘 마르고 물자국이 덜 남도록 도와주는 보조제입니다.",
+    "전용 린스": "식기세척기에 맞게 만든 헹굼 보조제로, 일반 세제와는 다릅니다.",
+    "FILL": "액체를 어디까지 채워야 하는지 알려주는 기준 표시입니다.",
+    "FILL 표시": "린스나 세제를 정해진 양까지 넣었는지 확인하는 기준선입니다.",
+    "표시부": "제품 상태나 알림이 화면이나 불빛으로 나타나는 부분입니다.",
+    "전원 표시부": "전원이 켜져 있는지와 필요한 알림을 보여주는 부분입니다.",
+    "보충": "부족한 것을 다시 채워 넣는다는 뜻입니다.",
+    "투입량": "제품 안에 넣는 린스나 세제의 양입니다.",
+    "조절": "필요에 맞게 양이나 세기를 바꾸는 것입니다.",
+    "사용설명서": "제품을 안전하고 올바르게 쓰는 방법을 적어 둔 문서입니다.",
+    "preset": "미리 저장해 둔 소리나 설정값입니다.",
+    "footswitch": "발로 눌러 기능을 바꾸는 스위치입니다.",
+    "expression pedal": "발로 움직여 볼륨이나 효과 정도를 조절하는 페달입니다.",
+    "firmware": "제품 안에서 동작을 제어하는 기본 프로그램입니다.",
+}
+
+
+def build_easy_glossary(answer: str, context: str) -> list[tuple[str, str]]:
+    combined = f"{answer}\n{context}"
+    glossary: list[tuple[str, str]] = []
+    for term, description in TERM_EXPLANATIONS.items():
+        if len(glossary) >= 5:
+            break
+        if re.search(re.escape(term), combined, re.IGNORECASE):
+            glossary.append((term, description))
+    return glossary
 
 
 clova_studio_service = ClovaStudioService()

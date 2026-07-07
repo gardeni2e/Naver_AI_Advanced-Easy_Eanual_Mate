@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import random
 import time
 from typing import Iterable
 
@@ -14,12 +15,38 @@ LOCAL_EMBED_DIM = 384
 
 
 class EmbeddingService:
+    def embed_documents(self, texts: list[str]) -> np.ndarray:
+        return self._embed_locally(texts)
+
     def embed(self, texts: list[str]) -> np.ndarray:
+        if not settings.clova_embed_remote_enabled:
+            return self._embed_locally(texts)
+        if self._should_embed_locally(texts):
+            return self._embed_locally(texts)
         if settings.clova_api_key:
-            return self._embed_with_clova(texts)
+            try:
+                return self._embed_with_clova(texts)
+            except RuntimeError as error:
+                if settings.clova_embed_fallback_to_local and "요청 제한" in str(error):
+                    return self._embed_locally(texts)
+                raise
         if settings.mock_when_no_api_key:
             return self._embed_locally(texts)
         raise RuntimeError("CLOVA_API_KEY가 설정되어 있지 않습니다.")
+
+    def embed_for_dimension(self, texts: list[str], dimension: int) -> np.ndarray:
+        if dimension == LOCAL_EMBED_DIM:
+            return self._embed_locally(texts)
+        if settings.clova_api_key:
+            return self._embed_with_clova(texts)
+        return self.embed(texts)
+
+    def _should_embed_locally(self, texts: list[str]) -> bool:
+        return (
+            settings.clova_embed_fallback_to_local
+            and settings.clova_embed_max_remote_chunks > 0
+            and len(texts) > settings.clova_embed_max_remote_chunks
+        )
 
     def _embed_with_clova(self, texts: list[str]) -> np.ndarray:
         vectors = []
@@ -64,9 +91,10 @@ class EmbeddingService:
             )
             retry_after = response.headers.get("Retry-After")
             if retry_after and retry_after.isdigit():
-                delay = float(retry_after)
+                delay = float(retry_after) + settings.clova_embed_retry_base_delay
             else:
-                delay = settings.clova_embed_retry_base_delay * (attempt + 1)
+                delay = settings.clova_embed_retry_base_delay * (2**attempt)
+            delay += random.uniform(0.2, 0.8)
             time.sleep(delay)
 
         raise RuntimeError(

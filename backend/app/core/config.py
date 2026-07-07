@@ -25,12 +25,15 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash"
 
-    chunk_size: int = 500
-    chunk_overlap: int = 80
+    chunk_size: int = 1200
+    chunk_overlap: int = 120
     top_k: int = 4
-    clova_embed_retry_count: int = 4
-    clova_embed_retry_base_delay: float = 2.0
-    clova_embed_request_interval: float = 0.25
+    clova_embed_retry_count: int = 8
+    clova_embed_retry_base_delay: float = 4.0
+    clova_embed_request_interval: float = 0.8
+    clova_embed_remote_enabled: bool = False
+    clova_embed_fallback_to_local: bool = True
+    clova_embed_max_remote_chunks: int = 80
     mock_when_no_api_key: bool = True
 
     upload_dir: str = "app/data/uploads"

@@ -43,10 +43,10 @@ async def ingest_pdf_upload(file: UploadFile) -> ManualUploadResponse:
         manual_id=manual_id,
         source=pdf_path.name,
         source_type="PDF",
-        max_chars=settings.chunk_size,
+        max_chars=max(settings.chunk_size, 1200),
         overlap=settings.chunk_overlap,
     )
-    embeddings = embedding_service.embed([chunk.text for chunk in chunks])
+    embeddings = embedding_service.embed_documents([chunk.text for chunk in chunks])
     vector_store_service.save(manual_id, embeddings, chunks)
     product = estimate_product_info(full_text, file.filename or pdf_path.name)
     metadata_service.upsert_manual(manual_id, "PDF", pdf_path.name, product, len(chunks))
@@ -70,7 +70,7 @@ async def ingest_ocr_text(file_name: str, ocr_text: str) -> OcrUploadResponse:
         max_chars=max(len(ocr_text), settings.chunk_size),
         overlap=0,
     )
-    embeddings = embedding_service.embed([chunk.text for chunk in chunks])
+    embeddings = embedding_service.embed_documents([chunk.text for chunk in chunks])
     vector_store_service.save(manual_id, embeddings, chunks)
     metadata_service.upsert_manual(manual_id, "OCR", file_name, ProductInfo(product_name=file_name), len(chunks))
     return OcrUploadResponse(
@@ -83,7 +83,7 @@ async def ingest_ocr_text(file_name: str, ocr_text: str) -> OcrUploadResponse:
 
 def answer_question(manual_id: str, question: str, answer_mode: str, top_k: int) -> ChatResponse:
     rag_index = vector_store_service.load(manual_id)
-    query_embedding = embedding_service.embed([question])
+    query_embedding = embedding_service.embed_for_dimension([question], rag_index.dim)
     sources = vector_store_service.search(rag_index, query_embedding, top_k)
     source_type = sources[0].source_type if sources else "PDF"
     answer = clova_studio_service.answer(question, sources, answer_mode, source_type=source_type)

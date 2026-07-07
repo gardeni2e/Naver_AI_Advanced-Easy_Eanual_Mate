@@ -31,3 +31,15 @@ app.include_router(videos.router, prefix="/api/videos", tags=["videos"])
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/debug/config")
+def debug_config() -> dict[str, object]:
+    return {
+        "chunk_size": settings.chunk_size,
+        "chunk_overlap": settings.chunk_overlap,
+        "clova_embed_remote_enabled": settings.clova_embed_remote_enabled,
+        "clova_embed_fallback_to_local": settings.clova_embed_fallback_to_local,
+        "clova_embed_max_remote_chunks": settings.clova_embed_max_remote_chunks,
+        "mock_when_no_api_key": settings.mock_when_no_api_key,
+    }

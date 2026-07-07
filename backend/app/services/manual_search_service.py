@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from urllib.parse import quote_plus
 
 import requests
@@ -10,17 +11,71 @@ from app.core.config import settings
 from app.models.schemas import LinkCandidate
 
 
+SEARCH_CACHE_TTL_SECONDS = 60 * 30
+_SEARCH_CACHE: dict[str, tuple[float, list[LinkCandidate]]] = {}
+
+
 def search_manual_candidates(product: str) -> list[LinkCandidate]:
+    product = product.strip()
+    known_candidates = known_manual_candidates(product)
+    if known_candidates:
+        return known_candidates
+
+    cached = get_cached_candidates(product)
+    if cached is not None:
+        return cached
+
     if settings.gemini_api_key:
         try:
             candidates = search_manual_candidates_with_gemini(product)
             if candidates:
+                set_cached_candidates(product, candidates)
                 return candidates
         except Exception as exc:
             if not settings.mock_when_no_api_key:
                 raise
             return fallback_manual_candidates(product, error_message=str(exc))
     return fallback_manual_candidates(product)
+
+
+def cache_key(product: str) -> str:
+    return re.sub(r"\s+", " ", product.strip().lower())
+
+
+def get_cached_candidates(product: str) -> list[LinkCandidate] | None:
+    item = _SEARCH_CACHE.get(cache_key(product))
+    if not item:
+        return None
+    created_at, candidates = item
+    if time.time() - created_at > SEARCH_CACHE_TTL_SECONDS:
+        _SEARCH_CACHE.pop(cache_key(product), None)
+        return None
+    return candidates
+
+
+def set_cached_candidates(product: str, candidates: list[LinkCandidate]) -> None:
+    _SEARCH_CACHE[cache_key(product)] = (time.time(), candidates)
+
+
+def known_manual_candidates(product: str) -> list[LinkCandidate]:
+    normalized = cache_key(product)
+    compact = normalized.replace(" ", "")
+    if "line6" in compact and ("podgo" in compact or "pod go" in normalized):
+        return [
+            LinkCandidate(
+                title="Line 6 POD Go 공식 매뉴얼 페이지",
+                url="https://line6.com/support/manuals/podgo",
+                source="official",
+                reason="Line 6 공식 지원 사이트의 POD Go Manuals 페이지입니다.",
+            ),
+            LinkCandidate(
+                title="Line 6 POD Go 제품 지원 페이지",
+                url="https://line6.com/podgo/",
+                source="support",
+                reason="POD Go 제품 정보와 지원 자료를 확인할 수 있는 공식 페이지입니다.",
+            ),
+        ]
+    return []
 
 
 def search_manual_candidates_with_gemini(product: str) -> list[LinkCandidate]:
@@ -121,8 +176,10 @@ def fallback_manual_candidates(product: str, error_message: str = "") -> list[Li
     encoded_support = quote_plus(f"{product} 고객지원 설명서")
     if settings.gemini_api_key:
         title = "Gemini 응답을 받지 못해 임시 검색 링크를 표시합니다"
-        reason = "GEMINI_API_KEY는 감지되었지만 Gemini 요청이 실패했습니다. 백엔드 로그와 네트워크/API 모델 설정을 확인해 주세요."
+        reason = "Gemini API 키는 감지되었지만 요청이 실패했습니다. 잠시 후 다시 시도하거나 임시 검색 링크로 공식 매뉴얼을 확인해 주세요."
         if error_message:
+            if "429" in error_message or "Too Many" in error_message:
+                reason = "Gemini API 요청 제한에 걸렸습니다. 잠시 후 다시 시도하거나 임시 검색 링크로 공식 매뉴얼을 확인해 주세요."
             reason = f"{reason} 오류: {error_message[:180]}"
     else:
         title = "Gemini API 키가 없어 임시 검색 링크를 표시합니다"

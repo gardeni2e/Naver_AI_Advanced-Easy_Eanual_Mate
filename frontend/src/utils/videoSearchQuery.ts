@@ -16,9 +16,12 @@ function cleanText(value: string) {
   return value
     .replace(/\.[a-z0-9]+$/i, " ")
     .replace(/[_-]+/g, " ")
-    .replace(/\b(owner'?s?|user|pilots?|quick|manual|guide|english|korean|pdf)\b/gi, " ")
+    .replace(/\b(owner'?s?|user|pilots?|quick|manual|guide|english|korean|pdf|tutorial|setup|how|to|use)\b/gi, " ")
     .replace(/\b(v?\d+(?:\.\d+){1,3})\b/gi, " ")
-    .replace(/\b[A-Z]{1,4}\d{2,}[A-Z0-9-]*\b/g, " ")
+    .replace(/\b[A-Z]\d{1,3}\b/g, " ")
+    .replace(/\b[A-Z]{1,8}\d{2,}[A-Z0-9-]*\b/g, " ")
+    .replace(/\b[A-Z0-9]*\d[A-Z0-9]{2,}\b/gi, " ")
+    .replace(/\b\d{2,}\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -41,6 +44,19 @@ function uniqueParts(parts: string[]) {
   });
 }
 
+function uniqueWords(value: string) {
+  const seen = new Set<string>();
+  return value
+    .split(/\s+/)
+    .filter((word) => {
+      const key = word.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(" ");
+}
+
 export function buildVideoSearchQuery(input: ManualVideoSearchInput) {
   const product = input.estimatedProduct;
   const fileName = cleanText(getDisplayManualName(input.fileName ?? ""));
@@ -49,9 +65,9 @@ export function buildVideoSearchQuery(input: ManualVideoSearchInput) {
   const modelName = shouldUseModelName(product?.model_name ?? "") ? cleanText(product?.model_name ?? "") : "";
 
   const parts = uniqueParts([manufacturer, productName, modelName, fileName]);
-  const baseQuery = parts.join(" ").replace(/\s+/g, " ").trim();
+  const baseQuery = uniqueWords(parts.join(" ").replace(/\s+/g, " ").trim());
 
-  return baseQuery ? `${baseQuery} manual tutorial` : "";
+  return baseQuery;
 }
 
 export function buildVideoSearchQueryFromUpload(result: ManualUploadResponse) {
