@@ -1,0 +1,193 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  color: #111827;
+  background: #f6f8fc;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f6f8fc;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  color: #ffffff;
+  background: #2563eb;
+}
+
+.ambient-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.ambient-shell::before {
+  position: fixed;
+  inset: -18%;
+  z-index: -2;
+  content: "";
+  background:
+    radial-gradient(ellipse at 18% 18%, rgba(59, 130, 246, 0.15), transparent 34%),
+    radial-gradient(ellipse at 78% 6%, rgba(124, 58, 237, 0.12), transparent 32%),
+    radial-gradient(ellipse at 58% 88%, rgba(14, 165, 233, 0.10), transparent 34%),
+    linear-gradient(135deg, #fbfdff 0%, #f6f8fc 48%, #f9fbff 100%);
+  filter: blur(18px);
+  transform: translate3d(0, 0, 0);
+  animation: ambient-flow 24s ease-in-out infinite alternate;
+}
+
+.ambient-shell::after {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 70%);
+}
+
+@keyframes ambient-flow {
+  0% {
+    transform: translate3d(-1.5%, -1%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(1%, 1.5%, 0) scale(1.025);
+  }
+  100% {
+    transform: translate3d(1.5%, -0.5%, 0) scale(1.04);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-shell::before {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply rounded-lg border border-line/90 bg-white/90 backdrop-blur-xl;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+  }
+
+  .soft-card {
+    @apply rounded-lg border border-line bg-white/80;
+  }
+
+  .field {
+    @apply rounded-lg border border-line bg-white/90 px-3 text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/10;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 font-bold text-white transition hover:-translate-y-0.5 hover:bg-accent-dark focus:outline-none focus:ring-4 focus:ring-accent/20 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
+    box-shadow: 0 18px 54px rgba(59, 130, 246, 0.16);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 font-bold text-ink transition hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus:ring-4 focus:ring-accent/10 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .quiet-link-card {
+    @apply rounded-lg border border-line bg-white/80 transition hover:-translate-y-0.5 hover:border-accent focus:outline-none focus:ring-4 focus:ring-accent/10;
+  }
+
+  .quiet-link-card:hover {
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+  }
+
+  .shadow-card-menu {
+    box-shadow: 0 18px 46px rgba(15, 23, 42, 0.14);
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.55s ease both;
+  }
+}
+
+.large-text-mode {
+  font-size: 18px;
+}
+
+.large-text-mode button,
+.large-text-mode input,
+.large-text-mode textarea,
+.large-text-mode select {
+  font-size: 18px;
+}
+
+.large-text-mode .accessibility-copy {
+  font-size: 20px;
+  line-height: 1.9;
+}
+
+.answer-normal {
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.answer-large {
+  font-size: 22px;
+  line-height: 1.75;
+}
+
+.answer-xlarge {
+  font-size: 28px;
+  line-height: 1.8;
+}
+
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+

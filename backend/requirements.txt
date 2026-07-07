@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pydantic-settings
+requests
+numpy
+faiss-cpu
+pypdf
+pymupdf
+aiofiles
